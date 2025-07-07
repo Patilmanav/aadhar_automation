@@ -4,11 +4,12 @@ import os
 from flask import Flask, render_template, request, jsonify
 from main import AadharValidator
 from captcha_solver import CaptchaSolver
+import os
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static'
 
-TOGETHER_API_KEY = 'YOUR_TOGETHER_API_KEY'
+TOGETHER_API_KEY = 'e19e060328b8dfb73b00bff5908a882fe9165df55ffc361f34a651d03cd03c2d'
 
 @app.route('/')
 def index():
