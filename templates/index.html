@@ -4,60 +4,309 @@
   <meta charset="UTF-8">
   <title>Aadhaar Validator</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      background: #181818;
+      color: #33ff33;
+      font-family: 'Fira Mono', 'Consolas', 'Monaco', monospace;
+    }
+    .terminal-box {
+      background: #111;
+      border-radius: 8px;
+      box-shadow: 0 0 16px #0f0a, 0 0 2px #0f0a;
+      padding: 24px;
+      margin-top: 40px;
+      min-height: 350px;
+      font-size: 1.1rem;
+      color: #33ff33;
+      font-family: 'Fira Mono', 'Consolas', 'Monaco', monospace;
+    }
+    .terminal-step {
+      margin-bottom: 8px;
+      white-space: pre-line;
+    }
+    .terminal-prompt {
+      color: #00ff99;
+    }
+    .terminal-error {
+      color: #ff3333;
+    }
+    .terminal-success {
+      color: #00ff99;
+    }
+    .terminal-warning {
+      color: #ffff33;
+    }
+    .form-label, .btn {
+      color: #33ff33;
+    }
+    .btn-primary, .btn-success {
+      background: #222;
+      border: 1px solid #33ff33;
+      color: #33ff33;
+    }
+    .btn-primary:hover, .btn-success:hover {
+      background: #33ff33;
+      color: #181818;
+      border: 1px solid #33ff33;
+    }
+    input.form-control {
+      background: #222;
+      color: #33ff33;
+      border: 1px solid #33ff33;
+    }
+    input.form-control:focus {
+      background: #222;
+      color: #33ff33;
+      border: 1px solid #00ff99;
+      box-shadow: 0 0 0 2px #00ff9955;
+    }
+    ::selection {
+      background: #33ff33;
+      color: #181818;
+    }
+    .captcha-img {
+      border: 2px solid #33ff33;
+      background: #222;
+      margin-left: 10px;
+      max-width: 120px;
+      border-radius: 4px;
+    }
+    .terminal-cursor {
+      display: inline-block;
+      width: 10px;
+      background: none;
+      color: #33ff33;
+      animation: blink 1s steps(1) infinite;
+      font-weight: bold;
+      font-size: 1.1em;
+      vertical-align: middle;
+    }
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+    .spinner {
+      display: inline-block;
+      width: 1.2em;
+      height: 1.2em;
+      border: 2px solid #33ff33;
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
-<body class="bg-light p-4">
+<body>
   <div class="container">
-    <h1 class="mb-4">🔍 Aadhaar Validator</h1>
-
-    <form id="aadhar-form">
-      <div class="mb-3">
-        <label for="aadhar" class="form-label">Enter Aadhaar Number</label>
-        <input type="text" class="form-control" id="aadhar" name="aadhar" required>
-      </div>
-      <button type="submit" class="btn btn-primary">Validate</button>
-    </form>
-
-    <div id="captcha-section" class="my-4">
-      <h5>📷 CAPTCHA Preview</h5>
-      <img id="captcha-image" src="static/captcha.png" class="border rounded" style="max-width: 250px;">
+    <h1 class="mb-4" style="color:#00ff99;">💻 Aadhaar Validator Terminal</h1>
+    <div class="terminal-box" id="terminal">
+      <div class="terminal-step terminal-prompt">$ Enter Aadhaar number to begin...</div>
     </div>
-
-    <div id="result" class="mt-4"></div>
+    <form id="aadhar-form" autocomplete="off" style="margin-top:32px;">
+      <div class="mb-3">
+        <label for="aadhar" class="form-label">Aadhaar Number</label>
+        <input type="text" class="form-control" id="aadhar" name="aadhar" required autocomplete="off">
+      </div>
+      <button type="submit" class="btn btn-primary" id="aadhaar-submit-btn">
+        Submit Aadhaar <span class="spinner" id="aadhaar-spinner" style="display:none;"></span>
+      </button>
+    </form>
+    <form id="captcha-form" style="display:none; margin-top:24px;">
+      <div class="mb-3" id="captcha-img-row" style="display:none; text-align:center;">
+        <img id="captcha-image-large" src="/images/captcha.png" style="max-width: 320px; margin: 16px auto; display:block; border: 3px solid #33ff33; background:#222; border-radius: 6px;">
+      </div>
+      <div class="mb-3" id="captcha-input-row">
+        <label for="captcha" class="form-label">CAPTCHA</label>
+        <div class="d-flex align-items-center">
+          <input type="text" class="form-control me-2" id="captcha" name="captcha" required autocomplete="off">
+        </div>
+      </div>
+      <input type="hidden" id="captcha-aadhar" name="aadhar">
+      <input type="hidden" id="session-id" name="session_id">
+      <button type="submit" class="btn btn-success" id="captcha-submit-btn">
+        Submit CAPTCHA <span class="spinner" id="captcha-spinner" style="display:none;"></span>
+      </button>
+    </form>
   </div>
-
   <script>
     const form = document.getElementById('aadhar-form');
-    const resultDiv = document.getElementById('result');
+    const captchaForm = document.getElementById('captcha-form');
+    const captchaAadhar = document.getElementById('captcha-aadhar');
+    const sessionIdInput = document.getElementById('session-id');
+    const captchaImage = document.getElementById('captcha-image');
+    const terminal = document.getElementById('terminal');
+
+    let typingQueue = [];
+    let isTyping = false;
+    let cursor;
+
+    function addTerminalStep(text, type = '', animate = true) {
+      const div = document.createElement('div');
+      div.className = 'terminal-step' + (type ? ' ' + type : '');
+      if (animate) {
+        typingQueue.push({div, text, type});
+        processTypingQueue();
+      } else {
+        div.textContent = text;
+        terminal.appendChild(div);
+        updateCursor();
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+    }
+
+    function processTypingQueue() {
+      if (isTyping || typingQueue.length === 0) return;
+      isTyping = true;
+      const {div, text, type} = typingQueue.shift();
+      terminal.appendChild(div);
+      typeText(div, text, () => {
+        isTyping = false;
+        updateCursor();
+        terminal.scrollTop = terminal.scrollHeight;
+        processTypingQueue();
+      });
+    }
+
+    function typeText(div, text, cb) {
+      let i = 0;
+      div.textContent = '';
+      function typeChar() {
+        if (i < text.length) {
+          div.textContent += text[i++];
+          terminal.scrollTop = terminal.scrollHeight;
+          setTimeout(typeChar, 12 + Math.random() * 30);
+        } else {
+          updateCursor(); // Only update cursor after typing is done
+          cb();
+        }
+      }
+      typeChar();
+    }
+
+    function updateCursor() {
+      // Remove all existing cursors
+      document.querySelectorAll('.terminal-cursor').forEach(el => el.remove());
+      if (!terminal) return;
+      cursor = document.createElement('span');
+      cursor.className = 'terminal-cursor';
+      cursor.textContent = '█';
+      // Find the last terminal-step
+      const steps = terminal.querySelectorAll('.terminal-step');
+      if (steps.length > 0) {
+        steps[steps.length - 1].appendChild(cursor);
+      } else {
+        terminal.appendChild(cursor);
+      }
+      terminal.scrollTop = terminal.scrollHeight;
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      resultDiv.innerHTML = '<p><strong>Processing...</strong></p>';
-
+      const aadhaarBtn = document.getElementById('aadhaar-submit-btn');
+      const aadhaarSpinner = document.getElementById('aadhaar-spinner');
+      aadhaarBtn.disabled = true;
+      aadhaarSpinner.style.display = '';
+      terminal.innerHTML = '';
+      addTerminalStep('$ Submitting Aadhaar number...', 'terminal-prompt', true);
       const formData = new FormData(form);
-      const response = await fetch('/validate', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-      if (data.status && data.status.startsWith('ERROR')) {
-        resultDiv.innerHTML = `<div class="alert alert-danger">❌ ${data.status}</div>`;
-      } else if (data.isValid === true) {
-        let out = '<div class="alert alert-success">✅ Aadhaar is valid</div><ul>';
-        for (const [key, val] of Object.entries(data.data)) {
-          out += `<li><strong>${key}:</strong> ${val}</li>`;
+      try {
+        const response = await fetch('/validate', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+        if (data.status === 'CAPTCHA_REQUIRED' || data.status === 'CAPTCHA_AUTO') {
+          addTerminalStep('✔️ Aadhaar submitted. CAPTCHA fetched.', 'terminal-success', true);
+          addTerminalStep('> CAPTCHA image:', 'terminal-prompt', true);
+          showCaptchaImageLarge();
+          form.style.display = 'none';
+          captchaForm.style.display = '';
+          captchaAadhar.value = form.aadhar.value;
+          sessionIdInput.value = data.session_id;
+          document.getElementById('captcha-image-large').src = data.captcha_url + '?' + new Date().getTime();
+          if (data.status === 'CAPTCHA_AUTO') {
+            addTerminalStep('🤖 Trying to solve CAPTCHA automatically...', 'terminal-prompt', true);
+          }
+          if (data.captcha) {
+            // Auto-solve: fill and submit
+            addTerminalStep('🤖 Auto-solving CAPTCHA...', 'terminal-prompt', true);
+            document.getElementById('captcha').value = data.captcha;
+            document.getElementById('captcha-input-row').style.display = 'none';
+            setTimeout(() => captchaForm.requestSubmit(), 800);
+          } else {
+            // Show manual field
+            addTerminalStep('> Please enter the CAPTCHA shown above.', 'terminal-prompt', true);
+            document.getElementById('captcha-input-row').style.display = '';
+          }
+        } else {
+          handleResult(data);
         }
-        out += '</ul>';
-        resultDiv.innerHTML = out;
-      } else if (data.isValid === false) {
-        resultDiv.innerHTML = `<div class="alert alert-warning">⚠️ Invalid Aadhaar Number</div>`;
-      } else {
-        resultDiv.innerHTML = `<div class="alert alert-danger">⚠️ Something went wrong</div>`;
+      } catch (err) {
+        addTerminalStep('❌ Network error. Try again.', 'terminal-error', true);
+      } finally {
+        aadhaarBtn.disabled = false;
+        aadhaarSpinner.style.display = 'none';
       }
-
-      // Refresh the CAPTCHA image
-      document.getElementById('captcha-image').src = 'static/captcha.png?' + new Date().getTime();
     });
+
+    captchaForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const captchaBtn = document.getElementById('captcha-submit-btn');
+      const captchaSpinner = document.getElementById('captcha-spinner');
+      captchaBtn.disabled = true;
+      captchaSpinner.style.display = '';
+      addTerminalStep('$ Submitting CAPTCHA...', 'terminal-prompt', true);
+      const formData = new FormData(captchaForm);
+      try {
+        const response = await fetch('/submit_captcha', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await response.json();
+        handleResult(data);
+      } catch (err) {
+        addTerminalStep('❌ Network error. Try again.', 'terminal-error', true);
+      } finally {
+        captchaBtn.disabled = false;
+        captchaSpinner.style.display = 'none';
+      }
+    });
+
+    function showCaptchaImageLarge() {
+      document.getElementById('captcha-img-row').style.display = '';
+    }
+
+    function handleResult(data) {
+      if (data.status && data.status.startsWith('ERROR')) {
+        addTerminalStep('❌ ' + data.status, 'terminal-error', true);
+      } else if (data.isValid === true) {
+        addTerminalStep('✔️ Aadhaar is valid!', 'terminal-success', true);
+        for (const [key, val] of Object.entries(data.data)) {
+          addTerminalStep(`${key}: ${val}`, 'terminal-success', true);
+        }
+      } else if (data.isValid === false) {
+        addTerminalStep('⚠️ Invalid Aadhaar Number', 'terminal-warning', true);
+      } else {
+        addTerminalStep('⚠️ Something went wrong', 'terminal-warning', true);
+      }
+      // Reset for new validation
+      form.reset();
+      captchaForm.reset();
+      form.style.display = '';
+      captchaForm.style.display = 'none';
+      addTerminalStep('$ Enter Aadhaar number to begin...', 'terminal-prompt', true);
+      document.getElementById('captcha-img-row').style.display = 'none';
+      document.getElementById('captcha-input-row').style.display = '';
+    }
+    // Initial cursor
+    updateCursor();
   </script>
 </body>
 </html>
