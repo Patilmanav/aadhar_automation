@@ -6,16 +6,38 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.firefox.options import Options
 import time
 import sys
+import shutil
+import requests
+from selenium.webdriver.firefox.service import Service as FirefoxService
 
 
 class AadharValidator:
     def __init__(self, headless=True):
+        if not self._check_internet():
+            raise Exception("[🚫] No internet connection inside container.")
+
         self.options = Options()
         if headless:
             self.options.add_argument("--headless")
-        self.driver = webdriver.Firefox(options=self.options)
-        self.driver.get('https://myaadhaar.uidai.gov.in/check-aadhaar-validity')
+
+        # Specify geckodriver path manually
+        geckodriver_path = shutil.which("geckodriver")
+        if not geckodriver_path:
+            raise FileNotFoundError("Geckodriver not found in PATH!")
+
+        service = FirefoxService(executable_path=geckodriver_path)
+        self.driver = webdriver.Firefox(service=service, options=self.options)
         self.wait = WebDriverWait(self.driver, 15)
+
+        print("[🌐] Navigating to UIDAI site...")
+        self.driver.get("https://myaadhaar.uidai.gov.in/check-aadhaar-validity")
+
+    def _check_internet(self, url="https://myaadhaar.uidai.gov.in"):
+        try:
+            requests.get(url, timeout=5)
+            return True
+        except:
+            return False
 
     def wait_and_find(self, by, identifier):
         return self.wait.until(EC.presence_of_element_located((by, identifier)))
