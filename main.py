@@ -28,29 +28,28 @@ class AadharValidator:
 
         # Set proxy in Firefox
         firefox_profile = webdriver.FirefoxProfile()
-        firefox_profile.set_preference("network.proxy.type", 1)
-        firefox_profile.set_preference("network.proxy.ssl", proxy_host)
-        firefox_profile.set_preference("network.proxy.ssl_port", int(proxy_port))
-        firefox_profile.set_preference("network.proxy.http", proxy_host)
-        firefox_profile.set_preference("network.proxy.http_port", int(proxy_port))
-        firefox_profile.set_preference("network.proxy.share_proxy_settings", True)
-        firefox_profile.set_preference("network.proxy.no_proxies_on", "")
-        firefox_profile.set_preference("network.proxy.socks_remote_dns", True)
-
-        # Auth for proxy
-        firefox_profile.set_preference("network.proxy.autoconfig_url.include_path", True)
-        firefox_profile.set_preference("signon.autologin.proxy", True)
+        
+        # Proxy settings via Options
+        self.options.set_preference("network.proxy.type", 1)
+        self.options.set_preference("network.proxy.ssl", proxy_host)
+        self.options.set_preference("network.proxy.ssl_port", int(proxy_port))
+        self.options.set_preference("network.proxy.http", proxy_host)
+        self.options.set_preference("network.proxy.http_port", int(proxy_port))
+        self.options.set_preference("network.proxy.share_proxy_settings", True)
+        self.options.set_preference("network.proxy.no_proxies_on", "")
+        self.options.set_preference("network.proxy.socks_remote_dns", True)
+        self.options.set_preference("signon.autologin.proxy", True)
 
         # Required for proxy authentication popup
-        firefox_profile.set_preference("network.proxy.username", "scraperapi")
-        firefox_profile.set_preference("network.proxy.password", proxy_auth)
+        self.options.set_preference("network.proxy.username", "scraperapi")
+        self.options.set_preference("network.proxy.password", proxy_auth)
 
         # Finalize WebDriver
         geckodriver_path = shutil.which("geckodriver")
         if not geckodriver_path:
             raise FileNotFoundError("Geckodriver not found in PATH!")
 
-        service = FirefoxService(executable_path=geckodriver_path)
+        service = FirefoxService(executable_path=geckodriver_path,proxy_auth=proxy_auth,proxy_host=proxy_host,proxy_port=int(proxy_port))
         self.driver = webdriver.Firefox(
             service=service,
             options=self.options,
