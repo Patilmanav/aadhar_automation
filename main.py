@@ -4,47 +4,62 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.firefox.options import Options
-import time
-import sys
-import shutil
-import requests
 from selenium.webdriver.firefox.service import Service as FirefoxService
+import shutil
+import time
 
 
 class AadharValidator:
     def __init__(self, headless=True):
-        if not self._check_internet():
-            raise Exception("[🚫] No internet connection inside container.")
+        proxy_url = "scraperapi.country_code=in.device_type=desktop:fdb6ad036b3d7fffc992a80302d695a5@proxy-server.scraperapi.com:8001"
 
+        # Parse the proxy
+        if "@" in proxy_url:
+            creds, host_port = proxy_url.split("@")
+            proxy_auth = creds.split(":")[1]  # API key
+            proxy_host, proxy_port = host_port.split(":")
+        else:
+            raise Exception("Invalid proxy format")
+
+        # Setup Firefox options
         self.options = Options()
         if headless:
             self.options.add_argument("--headless")
 
-        # Specify geckodriver path manually
+        # Set proxy in Firefox
+        firefox_profile = webdriver.FirefoxProfile()
+        firefox_profile.set_preference("network.proxy.type", 1)
+        firefox_profile.set_preference("network.proxy.ssl", proxy_host)
+        firefox_profile.set_preference("network.proxy.ssl_port", int(proxy_port))
+        firefox_profile.set_preference("network.proxy.http", proxy_host)
+        firefox_profile.set_preference("network.proxy.http_port", int(proxy_port))
+        firefox_profile.set_preference("network.proxy.share_proxy_settings", True)
+        firefox_profile.set_preference("network.proxy.no_proxies_on", "")
+        firefox_profile.set_preference("network.proxy.socks_remote_dns", True)
+
+        # Auth for proxy
+        firefox_profile.set_preference("network.proxy.autoconfig_url.include_path", True)
+        firefox_profile.set_preference("signon.autologin.proxy", True)
+
+        # Required for proxy authentication popup
+        firefox_profile.set_preference("network.proxy.username", "scraperapi")
+        firefox_profile.set_preference("network.proxy.password", proxy_auth)
+
+        # Finalize WebDriver
         geckodriver_path = shutil.which("geckodriver")
         if not geckodriver_path:
             raise FileNotFoundError("Geckodriver not found in PATH!")
 
         service = FirefoxService(executable_path=geckodriver_path)
-        self.driver = webdriver.Firefox(service=service, options=self.options)
+        self.driver = webdriver.Firefox(
+            service=service,
+            options=self.options,
+            firefox_profile=firefox_profile
+        )
         self.wait = WebDriverWait(self.driver, 15)
 
         print("[🌐] Navigating to UIDAI site...")
         self.driver.get("https://myaadhaar.uidai.gov.in/check-aadhaar-validity")
-
-    def _check_internet(self, url="https://myaadhaar.uidai.gov.in"):
-        try:
-            response = requests.get(url, timeout=10)
-            if response.status_code in [200, 301, 302]:
-                print(f"[✅] Internet check passed: {response.status_code}")
-                return True
-            else:
-                print(f"[⚠️] Unexpected status code: {response.status_code}")
-                return False
-        except Exception as e:
-            print(f"[🚫] Internet check failed: {e}")
-            return False
-
 
     def wait_and_find(self, by, identifier):
         return self.wait.until(EC.presence_of_element_located((by, identifier)))
@@ -53,15 +68,11 @@ class AadharValidator:
         return self.wait.until(EC.presence_of_all_elements_located((by, identifier)))
 
     def save_captcha(self, path="captcha.png"):
-        try:
-            print("[INFO] Saving captcha image...")
-            captcha_element = self.wait_and_find(By.CLASS_NAME, 'auth-form__captcha-box')
-            time.sleep(1)
-            captcha_element.screenshot(path)
-            print(f"[INFO] CAPTCHA saved at '{path}'.")
-        except Exception as e:
-            print(f"[ERROR] CAPTCHA saving failed: {e}")
-            raise
+        print("[INFO] Saving captcha image...")
+        captcha_element = self.wait_and_find(By.CLASS_NAME, 'auth-form__captcha-box')
+        time.sleep(1)
+        captcha_element.screenshot(path)
+        print(f"[INFO] CAPTCHA saved at '{path}'.")
 
     def get_captcha_solution(self):
         return input("Enter CAPTCHA from image: ")
@@ -70,20 +81,16 @@ class AadharValidator:
         return input("Enter Aadhar number: ")
 
     def submit_form(self, aadhar_number, captcha_text):
-        try:
-            print("[INFO] Filling form...")
-            self.wait_and_find(By.NAME, 'uid').send_keys(aadhar_number)
-            self.wait_and_find(By.NAME, 'captcha').send_keys(captcha_text)
+        print("[INFO] Filling form...")
+        self.wait_and_find(By.NAME, 'uid').send_keys(aadhar_number)
+        self.wait_and_find(By.NAME, 'captcha').send_keys(captcha_text)
 
-            self.driver.execute_script("window.focus();")
-            ActionChains(self.driver).move_by_offset(0, 0).click().perform()
+        self.driver.execute_script("window.focus();")
+        ActionChains(self.driver).move_by_offset(0, 0).click().perform()
 
-            submit_btn = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'button_btn__HeAxz')]")))
-            self.driver.execute_script("arguments[0].click();", submit_btn)
-            print("[INFO] Submit clicked.")
-        except Exception as e:
-            print(f"[ERROR] Form submission failed: {e}")
-            raise
+        submit_btn = self.wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'button_btn__HeAxz')]")))
+        self.driver.execute_script("arguments[0].click();", submit_btn)
+        print("[INFO] Submit clicked.")
 
     def check_for_errors(self):
         try:
@@ -157,3 +164,4 @@ if __name__ == "__main__":
         print(f"[FATAL] Unexpected error: {ex}")
     finally:
         validator.close_browser()
+        print("[INFO] Exiting program.")
