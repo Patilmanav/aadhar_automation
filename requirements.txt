@@ -4,3 +4,5 @@ together
 gunicorn
 waitress
 requests
+selenium-wire
+webdriver_manager

@@ -1,59 +1,40 @@
-from selenium import webdriver
+from seleniumwire import webdriver  # seleniumwire patch
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.firefox.service import Service as FirefoxService
-import shutil
+from webdriver_manager.firefox import GeckoDriverManager
 import time
 
 
 class AadharValidator:
     def __init__(self, headless=True):
-        proxy_url = "scraperapi.country_code=in.device_type=desktop:fdb6ad036b3d7fffc992a80302d695a5@proxy-server.scraperapi.com:8001"
+        proxy_host = "proxy-server.scraperapi.com"
+        proxy_port = 8001
+        api_key = "fdb6ad036b3d7fffc992a80302d695a5"
 
-        # Parse the proxy
-        if "@" in proxy_url:
-            creds, host_port = proxy_url.split("@")
-            proxy_auth = creds.split(":")[1]  # API key
-            proxy_host, proxy_port = host_port.split(":")
-        else:
-            raise Exception("Invalid proxy format")
+        proxy_url = f"http://scraperapi:{api_key}@{proxy_host}:{proxy_port}"
 
-        # Setup Firefox options
+        seleniumwire_options = {
+            'proxy': {
+                'http': proxy_url,
+                'https': proxy_url,
+                'no_proxy': 'localhost,127.0.0.1'
+            }
+        }
+
+        # Set Firefox options
         self.options = Options()
         if headless:
             self.options.add_argument("--headless")
 
-        # Set proxy in Firefox
-        # firefox_profile = webdriver.FirefoxProfile()
-        
-        # Proxy settings via Options
-        self.options.set_preference("network.proxy.type", 1)
-        self.options.set_preference("network.proxy.ssl", proxy_host)
-        self.options.set_preference("network.proxy.ssl_port", int(proxy_port))
-        self.options.set_preference("network.proxy.http", proxy_host)
-        self.options.set_preference("network.proxy.http_port", int(proxy_port))
-        self.options.set_preference("network.proxy.share_proxy_settings", True)
-        self.options.set_preference("network.proxy.no_proxies_on", "")
-        self.options.set_preference("network.proxy.socks_remote_dns", True)
-        self.options.set_preference("signon.autologin.proxy", True)
-
-        # Required for proxy authentication popup
-        self.options.set_preference("network.proxy.username", "scraperapi")
-        self.options.set_preference("network.proxy.password", proxy_auth)
-
-        # Finalize WebDriver
-        geckodriver_path = shutil.which("geckodriver")
-        if not geckodriver_path:
-            raise FileNotFoundError("Geckodriver not found in PATH!")
-
-        service = FirefoxService(executable_path=geckodriver_path,proxy_auth=proxy_auth,proxy_host=proxy_host,proxy_port=int(proxy_port))
+        # Initialize Firefox with selenium-wire and proxy
         self.driver = webdriver.Firefox(
-            service=service,
-            options=self.options,
-            # firefox_profile=firefox_profile
+            seleniumwire_options=seleniumwire_options,
+            service=FirefoxService(GeckoDriverManager().install()),
+            options=self.options
         )
         self.wait = WebDriverWait(self.driver, 15)
 
