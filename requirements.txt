@@ -6,3 +6,4 @@ waitress
 requests
 selenium-wire
 webdriver_manager
+blinker<1.6
