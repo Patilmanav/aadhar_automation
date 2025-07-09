@@ -34,10 +34,17 @@ class AadharValidator:
 
     def _check_internet(self, url="https://myaadhaar.uidai.gov.in"):
         try:
-            requests.get(url, timeout=5)
-            return True
-        except:
+            response = requests.get(url, timeout=10)
+            if response.status_code in [200, 301, 302]:
+                print(f"[✅] Internet check passed: {response.status_code}")
+                return True
+            else:
+                print(f"[⚠️] Unexpected status code: {response.status_code}")
+                return False
+        except Exception as e:
+            print(f"[🚫] Internet check failed: {e}")
             return False
+
 
     def wait_and_find(self, by, identifier):
         return self.wait.until(EC.presence_of_element_located((by, identifier)))

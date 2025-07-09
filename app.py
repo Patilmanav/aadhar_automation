@@ -67,6 +67,30 @@ def submit_captcha():
         except Exception:
             pass
 
+import requests
+
+@app.route('/check_site', methods=['GET'])
+def check_site():
+    url = request.args.get('url')
+
+    if not url:
+        return jsonify({"status": "ERROR", "message": "Missing URL parameter"}), 400
+
+    try:
+        response = requests.get(url, timeout=5)
+        return jsonify({
+            "url": url,
+            "status": "OK" if response.status_code == 200 else "WARNING",
+            "status_code": response.status_code,
+            "reason": response.reason
+        })
+    except requests.exceptions.RequestException as e:
+        return jsonify({
+            "url": url,
+            "status": "ERROR",
+            "message": str(e)
+        }), 500
+
 if __name__ == '__main__':
     from waitress import serve
     serve(app, host='0.0.0.0', port=5000)
