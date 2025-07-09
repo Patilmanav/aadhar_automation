@@ -27,7 +27,7 @@ class AadharValidator:
             self.options.add_argument("--headless")
 
         # Set proxy in Firefox
-        firefox_profile = webdriver.FirefoxProfile()
+        # firefox_profile = webdriver.FirefoxProfile()
         
         # Proxy settings via Options
         self.options.set_preference("network.proxy.type", 1)
@@ -53,7 +53,7 @@ class AadharValidator:
         self.driver = webdriver.Firefox(
             service=service,
             options=self.options,
-            firefox_profile=firefox_profile
+            # firefox_profile=firefox_profile
         )
         self.wait = WebDriverWait(self.driver, 15)
 
