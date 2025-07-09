@@ -32,13 +32,13 @@ def validate():
     try:
         validator.save_captcha(captcha_path)
         # Try auto captcha solver
-        try:
-            solver = CaptchaSolver(api_key=TOGETHER_API_KEY)
-            captcha_value = solver.solve_captcha_from_url(request.host_url + f"images/captcha_{session_id}.png")
-            if captcha_value:
-                return jsonify({"status": "CAPTCHA_AUTO", "session_id": session_id, "captcha": captcha_value, "captcha_url": f"/images/captcha_{session_id}.png", "data": None, "isValid": None})
-        except Exception as solver_exc:
-            pass  # Fallback to manual if solver fails
+        # try:
+        #     solver = CaptchaSolver(api_key=TOGETHER_API_KEY)
+        #     captcha_value = solver.solve_captcha_from_url(request.host_url + f"images/captcha_{session_id}.png")
+        #     if captcha_value:
+        #         return jsonify({"status": "CAPTCHA_AUTO", "session_id": session_id, "captcha": captcha_value, "captcha_url": f"/images/captcha_{session_id}.png", "data": None, "isValid": None})
+        # except Exception as solver_exc:
+        #     pass  # Fallback to manual if solver fails
         return jsonify({"status": "CAPTCHA_REQUIRED", "session_id": session_id, "captcha_url": f"/images/captcha_{session_id}.png", "data": None, "isValid": None})
     except Exception as e:
         validator.close_browser()
