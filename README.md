@@ -228,7 +228,6 @@ The project includes demo videos showing both interfaces in action:
 
 ### Desktop Application
 ![Desktop GUI](images\destop_aadhar_automation.png)
-![alt text](image.png)
 ### Web Interface
 ![Web Interface](images\web_aadhar_automation.png)
 
