@@ -1,4 +1,4 @@
-from seleniumwire import webdriver  # seleniumwire patch
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -11,28 +11,11 @@ import time
 
 class AadharValidator:
     def __init__(self, headless=True):
-        proxy_host = "proxy-server.scraperapi.com"
-        proxy_port = 8001
-        api_key = "fdb6ad036b3d7fffc992a80302d695a5"
-
-        proxy_url = f"http://scraperapi:{api_key}@{proxy_host}:{proxy_port}"
-
-        seleniumwire_options = {
-            'proxy': {
-                'http': proxy_url,
-                'https': proxy_url,
-                'no_proxy': 'localhost,127.0.0.1'
-            }
-        }
-
         # Set Firefox options
         self.options = Options()
         if headless:
             self.options.add_argument("--headless")
-
-        # Initialize Firefox with selenium-wire and proxy
         self.driver = webdriver.Firefox(
-            seleniumwire_options=seleniumwire_options,
             service=FirefoxService(GeckoDriverManager().install()),
             options=self.options
         )
